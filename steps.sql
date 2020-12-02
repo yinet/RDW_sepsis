@@ -26,13 +26,25 @@ SELECT * FROM `physionet-data.mimic_hosp.labevents` WHERE itemid=51277
 
 2.	合并sepsis3+icustays+patients+admissions
 --------------------------------------------------------------------
-with height as                                --身高
+with height as     --身高
 (SELECT 
 * 
 FROM `physionet-data.mimic_icu.chartevents` 
-where --itemid =226707 --inch
---or 
+where
 itemid =226730  --cm
+--or itemid =226707 --inch
+order by hadm_id, stay_id, charttime
+)
+
+，weight as     --体重
+(SELECT 
+hadm_id,stay_id,charttime,valuenum
+--,round(case when valueuom='kg' then valuenum else valuenum*0.4545 end,1) as weight_kg
+,valueuom
+FROM `physionet-data.mimic_icu.chartevents` 
+where
+itemid =226512  --kg
+--or itemid =226531 --lbs
 order by hadm_id, stay_id, charttime
 )
 
