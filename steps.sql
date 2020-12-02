@@ -26,12 +26,23 @@ SELECT * FROM `physionet-data.mimic_hosp.labevents` WHERE itemid=51277
 
 2.	合并sepsis3+icustays+patients+admissions
 --------------------------------------------------------------------
+with height as                                --身高
+(SELECT 
+* 
+FROM `physionet-data.mimic_icu.chartevents` 
+where --itemid =226707 --inch
+--or 
+itemid =226730  --cm
+order by hadm_id, stay_id, charttime
+)
+
 SELECT 
 s.subject_id
 , i.hadm_id
 , s.stay_id
 , case when p.gender='F' then 1 else 0 end as gender
 , p.anchor_age
+, height.valuenum as heigth_cm
 , CAST(COALESCE(prg.pregnant, 0) AS INT64) AS pregnant
 , s.suspected_infection_time
 , s.sofa_time
@@ -61,6 +72,8 @@ LEFT JOIN (
   GROUP BY 1
 ) prg
   ON i.stay_id = prg.stay_id
+LEFT JOIN height 
+on i.stay_id=height.stay_id
 ORDER BY i.hadm_id, s.stay_id, i.intime
 --------------------------------------------------------------------
 
