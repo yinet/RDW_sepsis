@@ -18,10 +18,35 @@ inner join `physionet-data.mimic_derived.sepsis3` s
 on i.stay_id= s.stay_id
 order by i.stay_id,i.intime,s.sofa_time,s.suspected_infection_time
 --------------------------------------------------------------------
+
 1.	提取 RDW
+--------------------------------------------------------------------
 SELECT * FROM `physionet-data.mimic_hosp.labevents` WHERE itemid=51277
+--------------------------------------------------------------------
+
 2.	合并sepsis3+icustays+patients+admissions
-SELECT s.subject_id, i.hadm_id, s.stay_id, p.gender, p.anchor_age, s.suspected_infection_time, s.sofa_time, s.sofa_score  , i.intime,i.outtime, i.first_careunit, i.last_careunit , i.los, p.dod, a.admittime, a.dischtime,a.deathtime,a.discharge_location,a.hospital_expire_flag
+--------------------------------------------------------------------
+SELECT 
+s.subject_id
+, i.hadm_id
+, s.stay_id
+, case when p.gender='F' then 1 else 0 end as gender
+, p.anchor_age
+, CAST(COALESCE(prg.pregnant, 0) AS INT64) AS pregnant
+, s.suspected_infection_time
+, s.sofa_time
+, s.sofa_score  
+, i.intime
+,i.outtime
+, i.first_careunit
+, i.last_careunit 
+, i.los
+, p.dod
+, a.admittime
+, a.dischtime
+,a.deathtime
+,a.discharge_location
+,a.hospital_expire_flag
 FROM `physionet-data.mimic_derived.sepsis3` s
 inner join `physionet-data.mimic_icu.icustays` i
 on s.stay_id = i.stay_id
@@ -29,7 +54,16 @@ left join  `physionet-data.mimic_core.patients` p
 on s.subject_id = p.subject_id
 left join  `physionet-data.mimic_core.admissions` a
 on i.hadm_id = a.hadm_id
-ORDER BY i.hadm_id,s.stay_id, i.intime
+LEFT JOIN (
+  SELECT stay_id, MAX(valuenum) as pregnant
+  FROM physionet-data.mimic_icu.chartevents
+  WHERE itemid = 225082 -- Pregnant
+  GROUP BY 1
+) prg
+  ON i.stay_id = prg.stay_id
+ORDER BY i.hadm_id, s.stay_id, i.intime
+--------------------------------------------------------------------
+
 3.	去除重复数据
 duplicates drop  hadm_id stay_id intime outtime,force
 
