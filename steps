@@ -1,0 +1,19 @@
+--根据 distinct stay_id 确定符合 sepsis3.0 标准的唯一病人数为 11681
+select count(distinct stay_id) FROM `physionet-data.mimic_derived.sepsis3`
+
+SELECT 
+i.subject_id
+,i.hadm_id
+,i.stay_id
+,i.intime
+,s.suspected_infection_time
+,s.sofa_time
+,s.sofa_score
+,i.first_careunit
+,i.last_careunit
+,i.outtime
+,i.los 
+FROM `physionet-data.mimic_icu.icustays` i
+inner join `physionet-data.mimic_derived.sepsis3` s
+on i.stay_id= s.stay_id
+order by i.stay_id,i.intime,s.sofa_time,s.suspected_infection_time
