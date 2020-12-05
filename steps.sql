@@ -22,12 +22,12 @@ on i.stay_id= s.stay_id
 order by i.subject_id, i.hadm_id, i.intime, s.suspected_infection_time
 --------------------------------------------------------------------
 
-1.提取 RDW
+--1.提取 RDW
 --------------------------------------------------------------------
 SELECT * FROM `physionet-data.mimic_hosp.labevents` WHERE itemid=51277
 --------------------------------------------------------------------
 
-2.合并sepsis3+icustays+patients+admissions   病人数为 12529
+--2.合并sepsis3+icustays+patients+admissions   病人数为 12529
 --------------------------------------------------------------------
 --身高
 with height as     
@@ -101,19 +101,24 @@ ORDER BY s.subject_id, i.hadm_id, i.intime
 --3.去除重复数据
 --duplicates drop  hadm_id stay_id intime outtime,force
 
-3.排除妊娠
-drop if pregnant==1     -- 排除19
+--3.排除妊娠
+drop if pregnant==1     -- 共-19
 
-4.部分病人有转 ICU 记录，造成同一次住院期间有两个 stay_id，如hadm_id =20041437，删除？
-解决办法：
-将入 ICU 时间和出 ICU 时间转换为icu_intime，icu_outtime
-生成一个新变量，new_icu_outtime，同一次住院期间出现在各 ICU单元治疗转科的，最后一次的icu_outtime的值最大
+--4.部分病人存在在多个 icu 单元住院，造成同一次住院期间有两个 stay_id，如hadm_id =20041437，删除？
+--解决办法：将入 ICU 时间和出 ICU 时间转换为icu_intime，icu_outtime
 
+--生成一个新变量，new_icu_outtime，同一次住院期间出现在各 ICU单元治疗转科的，最后一次的icu_outtime的值最大
 sort hadm_id intime
 by hadm_id: egen new_icu_outtime = max(icu_outtime)
-	根据新变量重新生成new_icu_los
-		gen new_icu_los=(new_icu_outtime-icu_intime)/24
-5.剔除ICU 住院时间小于 1 天的患者:   -807
+--删除多余记录，共 -471
+duplicates drop subject_id ,force   
+
+--根据新变量重新生成new_icu_los
+gen new_icu_los=(new_icu_outtime-icu_intime)/24
+
+
+--5.剔除ICU 住院时间小于 1 天的患者:   共-897
 drop  if new_icu_los<1
-6.一个 subject_id有多个hadm_id 的，根据 in_time，只保留第一住院的
-duplicates drop subject_id ,force    -1754
+
+--6.合并身高，体重
+merge 1:1 stay_id using "/Users/jiangweiliang/OneDrive/文档/MIMIC/RDW/weight_kg.dta"
