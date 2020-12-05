@@ -106,10 +106,17 @@ drop if pregnant==1     -- 共-19
 
 --4.部分病人存在在多个 icu 单元住院，造成同一次住院期间有两个 stay_id，如hadm_id =20041437，删除？
 --解决办法：将入 ICU 时间和出 ICU 时间转换为icu_intime，icu_outtime
+gen intime_1 = substr(intime ,1,13)
+gen intime_2 = clock(intime_1,"YMDh")/3600/1000
+gen outtime_1 = substr(outtime ,1,13)
+gen outtime_2 = clock(outtime_1,"YMDh")/3600/1000
+rename intime_2 icu_intime
+rename outtime_2 icu_outtime
 
 --生成一个新变量，new_icu_outtime，同一次住院期间出现在各 ICU单元治疗转科的，最后一次的icu_outtime的值最大
 sort hadm_id intime
 by hadm_id: egen new_icu_outtime = max(icu_outtime)
+
 --删除多余记录，共 -471
 duplicates drop subject_id ,force   
 
@@ -122,3 +129,4 @@ drop  if new_icu_los<1
 
 --6.合并身高，体重
 merge 1:1 stay_id using "/Users/jiangweiliang/OneDrive/文档/MIMIC/RDW/weight_kg.dta"
+merge 1:1 stay_id using "/Users/jiangweiliang/OneDrive/文档/MIMIC/RDW/height_cm.dta"
