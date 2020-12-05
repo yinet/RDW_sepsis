@@ -118,6 +118,7 @@ sort hadm_id intime
 by hadm_id: egen new_icu_outtime = max(icu_outtime)
 
 --删除多余记录，共 -471
+sort subject_id intime
 duplicates drop subject_id ,force   
 
 --根据新变量重新生成new_icu_los
