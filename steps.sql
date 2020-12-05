@@ -1,5 +1,4 @@
 --sepsis3表记录 12529
---去除同一个病人多次住院经历，病人数为 10375
 
 with s as
 (select * from (select  ROW_NUMBER() OVER(PARTITION BY subject_id ORDER BY suspected_infection_time) row , * FROM `physionet-data.mimic_derived.sepsis3`)
@@ -28,14 +27,10 @@ order by i.subject_id, i.hadm_id, i.intime, s.suspected_infection_time
 SELECT * FROM `physionet-data.mimic_hosp.labevents` WHERE itemid=51277
 --------------------------------------------------------------------
 
-2.合并sepsis3+icustays+patients+admissions   病人数为 10375
+2.合并sepsis3+icustays+patients+admissions   病人数为 12529
 --------------------------------------------------------------------
-with s as
-(select * from (select  ROW_NUMBER() OVER(PARTITION BY subject_id ORDER BY suspected_infection_time) row , * FROM `physionet-data.mimic_derived.sepsis3`)
-where row =1  order by subject_id,suspected_infection_time
-)
 --身高
-,height as     
+with height as     
 (SELECT * FROM `physionet-data.mimic_icu.chartevents` 
 where itemid =226730  --cm
 --or itemid =226707 --inch
@@ -77,7 +72,7 @@ s.subject_id
 ,a.deathtime
 ,a.discharge_location
 ,a.hospital_expire_flag
-FROM  s
+FROM `physionet-data.mimic_derived.sepsis3` s
 inner join `physionet-data.mimic_icu.icustays` i 
 on s.stay_id = i.stay_id
 --and i.los>=1
@@ -100,15 +95,20 @@ LEFT JOIN weight
 ORDER BY s.subject_id, i.hadm_id, i.intime
 
 
+
 --------------------------------------------------------------------
 
-3.去除重复数据
-duplicates drop  hadm_id stay_id intime outtime,force
+--3.去除重复数据
+--duplicates drop  hadm_id stay_id intime outtime,force
+
+3.排除妊娠
+drop if pregnant==1     -- 排除19
 
 4.部分病人有转 ICU 记录，造成同一次住院期间有两个 stay_id，如hadm_id =20041437，删除？
 解决办法：
 将入 ICU 时间和出 ICU 时间转换为icu_intime，icu_outtime
 生成一个新变量，new_icu_outtime，同一次住院期间出现在各 ICU单元治疗转科的，最后一次的icu_outtime的值最大
+
 sort hadm_id intime
 by hadm_id: egen new_icu_outtime = max(icu_outtime)
 	根据新变量重新生成new_icu_los
