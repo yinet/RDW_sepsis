@@ -98,13 +98,7 @@ ORDER BY s.subject_id, i.hadm_id, i.intime
 
 --------------------------------------------------------------------
 
---3.去除重复数据
---duplicates drop  hadm_id stay_id intime outtime,force
-
---3.排除妊娠
-drop if pregnant==1     -- 共-19
-
---4.部分病人存在在多个 icu 单元住院，造成同一次住院期间有两个 stay_id，如hadm_id =20041437，删除？
+--3.部分病人存在在多个 icu 单元住院，造成同一次住院期间有两个 stay_id，如hadm_id =20041437，删除？
 --解决办法：将入 ICU 时间和出 ICU 时间转换为icu_intime，icu_outtime
 gen intime_1 = substr(intime ,1,13)
 gen intime_2 = clock(intime_1,"YMDh")/3600/1000
@@ -117,16 +111,18 @@ rename outtime_2 icu_outtime
 sort hadm_id intime
 by hadm_id: egen new_icu_outtime = max(icu_outtime)
 
---删除多余记录，共 -471
+--删除多余记录，共 -2154
 sort subject_id intime
 duplicates drop subject_id ,force   
 
 --根据新变量重新生成new_icu_los
 gen new_icu_los=(new_icu_outtime-icu_intime)/24
 
-
---5.剔除ICU 住院时间小于 1 天的患者:   共-897
+--4.剔除ICU 住院时间小于 1 天的患者:   共-769
 drop  if new_icu_los<1
+
+--5.排除妊娠
+drop if pregnant==1     -- 共-19
 
 --6.合并身高，体重
 merge 1:1 stay_id using "/Users/jiangweiliang/OneDrive/文档/MIMIC/RDW/weight_kg.dta"
